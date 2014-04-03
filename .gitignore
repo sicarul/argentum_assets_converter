@@ -1,0 +1,6 @@
+*.png
+*.BMP
+bin/
+lib/
+include/
+local/
