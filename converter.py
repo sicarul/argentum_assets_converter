@@ -1,4 +1,4 @@
-import os, re
+import os, re, sys
 from PIL import Image
 import numpy as np
 from loaders import *
@@ -79,23 +79,25 @@ def createBodySprites(bodies):
 
 
 def createHeadSprite(sprite):
-    path = os.path.join(DIR_HEADS, str(sprite['id']) + '_' + str(walk) + '.png')
+    if(sprite['head1'] < 1):
+        return
+    path = os.path.join(DIR_HEADS, str(sprite['id']) + '.png')
     
-    frames = framesId(sprite['head' + str(walk)])
-    first = Graphics[frames[0]]
-    height = first['height']
-    width = first['width']
-    total_width = width * len(frames)
+    total_width = 0
 
-    im = Image.new('RGBA', (total_width, height))
+    grh = Graphics[sprite['head1']]
+    height = grh['height']
+    width = grh['width']
+    
+    im = Image.new('RGBA', (width*4, height))
 
-    i = 0
-    for frame in frames:
-        grh = Graphics[frame]
-        im_f = Image.open('converted/' + str(frame) + '.png')
-
-        im.paste(im_f, (width * i, 0))
-        i+=1
+    for head in xrange(1,4):
+        grh = sprite['head' + str(head)]
+        im_f = Image.open('converted/' + str(grh) + '.png')
+        h = im_f.crop((width*(head-1), 0, width*head, height))
+        h.copy()
+        im.paste()
+    
     im.save(path)
 
 
