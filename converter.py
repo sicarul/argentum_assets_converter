@@ -91,13 +91,11 @@ def createHeadSprite(sprite):
     
     im = Image.new('RGBA', (width*4, height))
 
-    for head in xrange(1,4):
-        grh = sprite['head' + str(head)]
+    for head in xrange(4):
+        grh = sprite['head' + str(head+1)]
         im_f = Image.open('converted/' + str(grh) + '.png')
-        h = im_f.crop((width*(head-1), 0, width*head, height))
-        h.copy()
-        im.paste()
-    
+        im.paste(im_f, (width*(head), 0, width*(head+1), height) )
+
     im.save(path)
 
 
