@@ -1,22 +1,10 @@
-import os, re, sys
+import os, re, sys, json
 from PIL import Image
 import numpy as np
 from loaders import *
 
-FILE_GRAFICOS = 'INIT/Graficos3.ini'
-FILE_PERSONAJES = 'INIT/Personajes.ini'
-FILE_HEADS = 'INIT/cabezas.ini'
-DIR_ASSETS = 'assets'
-DIR_BODIES = os.path.join(DIR_ASSETS, 'bodies')
-DIR_HEADS = os.path.join(DIR_ASSETS, 'heads')
-
-
-Graphics = loadGraphics(FILE_GRAFICOS)
-Animations = loadAnimations(FILE_GRAFICOS)
-
-
 def transparentizePoint(point):
-    if point[0] + point[1] + point[2] == 0 and point[3] == 255:
+    if int(point[0]) + point[1] + point[2] == 0:
         return (0,0,0,0)
     else:
         return point
@@ -35,6 +23,7 @@ def transformGraphics():
         box = (grh['x'], grh['y'], grh['x'] + grh['width'], grh['y'] + grh['height'])
         cut = im.crop(box).convert('RGBA')
 
+
         pix = np.array(cut)
         pixtrans = transparentize(pix)
 
@@ -48,8 +37,8 @@ def framesId(id):
     else:
         return Animations[id]['frames']
 
-def createBodySprite(sprite, walk):
-    path = os.path.join(DIR_BODIES, str(sprite['id']) + '_' + str(walk) + '.png')
+def createBodySprite(id, sprite, walk):
+    path = os.path.join(DIR_BODIES, str(id) + '_' + str(walk) + '.png')
     
     frames = framesId(sprite['walk' + str(walk)])
     first = Graphics[frames[0]]
@@ -71,17 +60,16 @@ def createBodySprite(sprite, walk):
 
 def createBodySprites(bodies):
 
-    for sprite in bodies:     
-        createBodySprite(sprite, 1)
-        createBodySprite(sprite, 2)
-        createBodySprite(sprite, 3)
-        createBodySprite(sprite, 4)
+    for id in bodies:
+        sprite = bodies[id]
+        for x in range(1, 5):     
+            createBodySprite(id, sprite, x)
 
 
-def createHeadSprite(sprite):
+def createHeadSprite(id, sprite):
     if(sprite['head1'] < 1):
         return
-    path = os.path.join(DIR_HEADS, str(sprite['id']) + '.png')
+    path = os.path.join(DIR_HEADS, str(id) + '.png')
     
     total_width = 0
 
@@ -101,14 +89,65 @@ def createHeadSprite(sprite):
 
 def createHeadSprites(heads):
 
-    for sprite in heads:     
-        createHeadSprite(sprite)
+    for id in heads:
+        sprite = heads[id]
+        createHeadSprite(id, sprite)
+
+def dimensions_body(sprite, direction):
+    frames = framesId(sprite['walk' + str(direction)])
+    first = Graphics[frames[0]]
+    height = first['height']
+    width = first['width']
+    return {'w': width, 'h': height}
+
+def dimensions_head(sprite):
+    grh = Graphics[sprite['head1']]
+    height = grh['height']
+    width = grh['width']
+    return {'w': width, 'h': height}
+
+def output_bodies(result, fileout):
+    out_bodies = {}
+
+    for id in result:
+        sprite = result[id]
+        
+        out_bodies[id] = {
+            'up': dimensions_body(sprite, 1),
+            'right': dimensions_body(sprite, 2),
+            'down': dimensions_body(sprite, 3),
+            'left': dimensions_body(sprite, 4),
+            'headX': sprite['HeadOffsetX'],
+            'headY': dimensions_body(sprite, 1)['h'] + sprite['HeadOffsetY']
+        }
+
+    with open(fileout, 'wb') as f:
+        f.write(json.dumps(out_bodies))
 
 
+def output_heads(result, fileout):
+    out_heads = {}
 
-#transformGraphics(FILE)
+    for id in result:
+        sprite = result[id]
+        try:
+            out_heads[id] = dimensions_head(sprite)
+        except KeyError:
+            print "Did not find graphic for head number %d" % id
+
+    with open(fileout, 'wb') as f:
+        f.write(json.dumps(out_heads))
+
+
+Graphics = loadGraphics(FILE_GRAFICOS)
+Animations = loadAnimations(FILE_GRAFICOS)
+
+transformGraphics()
 result_bodies = loadBodies(FILE_PERSONAJES)
-#createBodySprites(result_bodies)
+output_bodies(result_bodies, FILE_OUTPUT_BODIES)
+createBodySprites(result_bodies)
+
 
 result_heads = loadHeads(FILE_HEADS)
+output_heads(result_heads, FILE_OUTPUT_HEADS)
 createHeadSprites(result_heads)
